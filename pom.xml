@@ -177,7 +177,7 @@
                             <mainClass>org.example.embedding.Main</mainClass>
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
-                                <buildArg>-J-Xmx20g</buildArg>
+                                <buildArg>-J-Xmx7g</buildArg>
                                 <buildArg>--shared</buildArg>
                             </buildArgs>
                         </configuration>
