@@ -7,20 +7,38 @@ on:
 permissions:
   contents: write
 
-
 jobs:
   build:
-    name: GraalVM on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: GraalVM on ${{ matrix.arch }}
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        arch: [armv6, armv7, aarch64]
     steps:
       - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+
+      - name: Run commands on ${{ matrix.arch }} architecture
+        uses: uraimo/run-on-arch-action@v2.1.1
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          run: |
+            uname -a
+            echo "Running on ${{ matrix.arch }} architecture"
 
       - uses: graalvm/setup-graalvm@v1
         with:
@@ -47,8 +65,28 @@ jobs:
           name: ${{ steps.executable.outputs.name }}
           path: target/embedding.os
 
-      - name: Upload release
-        if: github.event.release.tag_name
-        run: gh release upload ${{ github.event.release.tag_name }} target/embedding.h target/embedding.so target/embedding_dynamic.h target/graal_isolate.h target/graal_isolate_dynamic.h
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Create tarball
+        run: |
+          tar czvf embedding_files_${{ matrix.arch }}.tar.gz -C target/ embedding.h embedding.so embedding_dynamic.h graal_isolate.h graal_isolate_dynamic.h
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./embedding_files_${{ matrix.arch }}.tar.gz
+          asset_name: embedding_files_${{ matrix.arch }}.tar.gz
+          asset_content_type: application/gzip
