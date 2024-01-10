@@ -1,0 +1,54 @@
+name: Generate
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+
+jobs:
+  build:
+    name: GraalVM on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21.0.1'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build with Maven
+        run: mvn -Pnative package
+        env:
+          NO_DOCKER: ${{ runner.os != 'Linux' }}
+
+      - name: Archive binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.executable.outputs.name }}
+          path: target/embedding.os
+
+      - name: Upload release
+        if: github.event.release.tag_name
+        run: gh release upload ${{ github.event.release.tag_name }} target/embedding.os
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
