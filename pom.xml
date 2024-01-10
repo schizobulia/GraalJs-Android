@@ -178,7 +178,7 @@
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
                                 <buildArg>-J-Xmx20g</buildArg>
-<!--                                <buildArg>&#45;&#45;shared</buildArg>-->
+                                <buildArg>--shared</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>
