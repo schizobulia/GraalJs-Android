@@ -40,7 +40,7 @@ public class Main {
             for (String id : languages) {
                 context.initialize(id);
                 if (id.equals("js")) {
-                    context.eval("js", "function main(data) { console.log(data.readLine()); }");
+                    context.eval("js", "function main(data) { console.log(data); }");
                     Value funMain = context.getBindings("js").getMember("main");
                     funMain.execute("123");
                 }
